@@ -1,6 +1,6 @@
 """
 CLI tool for testing the email-agent backend.
-Run the server first: uvicorn main:app --reload
+Run the server first: uvicorn app.main:app --reload
 Then run this script: python cli_test.py
 """
 
