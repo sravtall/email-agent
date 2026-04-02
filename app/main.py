@@ -8,8 +8,8 @@ from app.bot.client import DMBot
 from app.config import ANTHROPIC_API_KEY, DISCORD_BOT_TOKEN
 
 logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s %(name)s: %(message)s",
 )
 
 

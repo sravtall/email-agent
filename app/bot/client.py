@@ -21,16 +21,12 @@ class DMBot(discord.Client):
         logger.info(f"Discord bot logged in as {self.user}")
 
     async def on_message(self, message: discord.Message):
-        logger.debug(f"on_message fired — author.bot={message.author.bot}, channel type={type(message.channel).__name__}, content={message.content!r}")
-
         if message.author.bot:
-            logger.debug("Ignored: message is from a bot")
             return
         if not isinstance(message.channel, discord.DMChannel):
-            logger.debug(f"Ignored: channel is {type(message.channel).__name__}, not DMChannel")
             return
 
-        logger.info(f"Processing DM from {message.author}: {message.content!r}")
+        logger.info(f"DM from {message.author}: {message.content!r}")
 
         async with message.channel.typing():
             try:
