@@ -1,9 +1,8 @@
 import logging
-from collections.abc import Awaitable, Callable
 
 import discord
 
-from app.services.llm import ask_claude
+from app.services.agent import run_agent
 
 DISCORD_MAX_LENGTH = 2000
 
@@ -11,11 +10,12 @@ logger = logging.getLogger(__name__)
 
 
 class DMBot(discord.Client):
-    def __init__(self, ask_fn: Callable[[str], Awaitable[str]] = ask_claude):
+    def __init__(self):
         intents = discord.Intents.default()
         intents.message_content = True  # privileged — must be enabled in Discord Dev Portal
         super().__init__(intents=intents)
-        self._ask = ask_fn
+        # Per-user conversation history keyed by Discord user ID.
+        self._histories: dict[int, list[dict]] = {}
 
     async def on_ready(self):
         logger.info(f"Discord bot logged in as {self.user}")
@@ -28,11 +28,14 @@ class DMBot(discord.Client):
 
         logger.info(f"DM from {message.author}: {message.content!r}")
 
+        history = self._histories.get(message.author.id, [])
+
         async with message.channel.typing():
             try:
-                reply = await self._ask(message.content)
+                reply, updated_history = await run_agent(message.content, history)
+                self._histories[message.author.id] = updated_history
             except Exception as e:
-                logger.error(f"ask_claude failed: {e}", exc_info=True)
+                logger.error(f"run_agent failed: {e}", exc_info=True)
                 await message.channel.send(f"Sorry, something went wrong: {e}")
                 return
 
