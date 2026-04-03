@@ -18,6 +18,11 @@ env/
 .env
 .env.*
 
+# Gmail OAuth
+credentials.json
+token.json
+auth.py
+
 # IDE
 .vscode/
 .idea/
