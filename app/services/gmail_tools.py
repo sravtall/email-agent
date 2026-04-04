@@ -105,6 +105,24 @@ def send_reply(message_id: str, body: str) -> dict:
     return sent
 
 
+def send_email(to: str, subject: str, body: str) -> dict:
+    """Send a new email (not a reply)."""
+    service = _get_service()
+    raw_message = (
+        f"To: {to}\r\n"
+        f"Subject: {subject}\r\n"
+        f"Content-Type: text/plain; charset=utf-8\r\n"
+        f"\r\n"
+        f"{body}"
+    )
+    encoded = base64.urlsafe_b64encode(raw_message.encode("utf-8")).decode("utf-8")
+    sent = service.users().messages().send(
+        userId="me",
+        body={"raw": encoded}
+    ).execute()
+    return sent
+
+
 def label_email(message_id: str, label: str) -> dict:
     """Apply a Gmail label (by name) to the given message, creating it if needed."""
     service = _get_service()

@@ -18,14 +18,15 @@ RESPONSE FORMAT:
 - When listing emails, use compact lines: "1. Alice - Meeting notes"
 
 CONFIRMATION RULE:
-- Before calling send_reply or label_email you MUST ask the user to confirm.
-- Format: "Reply to <sender>: '<preview>'? Reply YES to confirm."
+- Before calling send_email, send_reply, or label_email you MUST ask the user to confirm.
+- Format: "Send to <recipient>: '<preview>'? Reply YES to confirm."
 - Only call the tool when the user's message is an explicit YES / confirm / go ahead / do it.
 - If they say NO or anything else, cancel and say so in one short line.
 
 TOOL NOTES:
 - fetch_recent_emails: lists inbox, returns id/subject/sender/snippet per email.
 - get_email_body: reads full body of one email by id.
+- send_email: composes and sends a new email (confirm first).
 - send_reply: sends an in-thread reply (confirm first).
 - label_email: applies a label to an email (confirm first).
 """
@@ -60,6 +61,31 @@ GMAIL_TOOLS: list[dict] = [
                 }
             },
             "required": ["message_id"],
+        },
+    },
+    {
+        "name": "send_email",
+        "description": (
+            "Compose and send a new email to any recipient. "
+            "MUST be confirmed by the user before calling."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "to": {
+                    "type": "string",
+                    "description": "Recipient email address.",
+                },
+                "subject": {
+                    "type": "string",
+                    "description": "Subject line of the email.",
+                },
+                "body": {
+                    "type": "string",
+                    "description": "Plain-text body of the email.",
+                },
+            },
+            "required": ["to", "subject", "body"],
         },
     },
     {
@@ -110,6 +136,7 @@ GMAIL_TOOLS: list[dict] = [
 _TOOL_MAP = {
     "fetch_recent_emails": gmail_tools.fetch_recent_emails,
     "get_email_body": gmail_tools.get_email_body,
+    "send_email": gmail_tools.send_email,
     "send_reply": gmail_tools.send_reply,
     "label_email": gmail_tools.label_email,
 }

@@ -228,6 +228,52 @@ class TestSendReply:
 
 
 # ---------------------------------------------------------------------------
+# send_email
+# ---------------------------------------------------------------------------
+
+class TestSendEmail:
+    @patch("app.services.gmail_tools.build")
+    @patch("app.services.gmail_tools.Credentials.from_authorized_user_file")
+    @patch("app.services.gmail_tools._TOKEN_FILE")
+    def test_sends_correct_headers(self, mock_token_file, mock_creds, mock_build):
+        mock_token_file.exists.return_value = True
+        mock_token_file.__str__ = lambda s: "token.json"
+        mock_creds.return_value = MagicMock(expired=False)
+
+        svc = _make_service()
+        mock_build.return_value = svc
+        svc.users().messages().send().execute.return_value = {"id": "new1", "threadId": "t1"}
+
+        from app.services.gmail_tools import send_email
+        result = send_email("bob@example.com", "Hello", "Hi Bob!")
+
+        assert result["id"] == "new1"
+        body = svc.users().messages().send.call_args.kwargs["body"]
+        raw = base64.urlsafe_b64decode(body["raw"]).decode()
+        assert "To: bob@example.com" in raw
+        assert "Subject: Hello" in raw
+        assert "Hi Bob!" in raw
+
+    @patch("app.services.gmail_tools.build")
+    @patch("app.services.gmail_tools.Credentials.from_authorized_user_file")
+    @patch("app.services.gmail_tools._TOKEN_FILE")
+    def test_no_thread_id_in_payload(self, mock_token_file, mock_creds, mock_build):
+        mock_token_file.exists.return_value = True
+        mock_token_file.__str__ = lambda s: "token.json"
+        mock_creds.return_value = MagicMock(expired=False)
+
+        svc = _make_service()
+        mock_build.return_value = svc
+        svc.users().messages().send().execute.return_value = {"id": "new2"}
+
+        from app.services.gmail_tools import send_email
+        send_email("alice@example.com", "Test", "body")
+
+        body = svc.users().messages().send.call_args.kwargs["body"]
+        assert "threadId" not in body
+
+
+# ---------------------------------------------------------------------------
 # label_email
 # ---------------------------------------------------------------------------
 
