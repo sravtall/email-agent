@@ -232,6 +232,12 @@ class TestSendReply:
 # ---------------------------------------------------------------------------
 
 class TestSendEmail:
+    def _decode_mime(self, svc) -> "email.message.Message":
+        import email as stdlib_email
+        body = svc.users().messages().send.call_args.kwargs["body"]
+        raw = base64.urlsafe_b64decode(body["raw"])
+        return stdlib_email.message_from_bytes(raw)
+
     @patch("app.services.gmail_tools.build")
     @patch("app.services.gmail_tools.Credentials.from_authorized_user_file")
     @patch("app.services.gmail_tools._TOKEN_FILE")
@@ -242,17 +248,38 @@ class TestSendEmail:
 
         svc = _make_service()
         mock_build.return_value = svc
-        svc.users().messages().send().execute.return_value = {"id": "new1", "threadId": "t1"}
+        svc.users().messages().send().execute.return_value = {"id": "new1"}
 
         from app.services.gmail_tools import send_email
         result = send_email("bob@example.com", "Hello", "Hi Bob!")
 
         assert result["id"] == "new1"
-        body = svc.users().messages().send.call_args.kwargs["body"]
-        raw = base64.urlsafe_b64decode(body["raw"]).decode()
-        assert "To: bob@example.com" in raw
-        assert "Subject: Hello" in raw
-        assert "Hi Bob!" in raw
+        msg = self._decode_mime(svc)
+        assert msg["To"] == "bob@example.com"
+        assert msg["Subject"] == "Hello"
+
+    @patch("app.services.gmail_tools.build")
+    @patch("app.services.gmail_tools.Credentials.from_authorized_user_file")
+    @patch("app.services.gmail_tools._TOKEN_FILE")
+    def test_sends_html_and_plain_parts(self, mock_token_file, mock_creds, mock_build):
+        mock_token_file.exists.return_value = True
+        mock_token_file.__str__ = lambda s: "token.json"
+        mock_creds.return_value = MagicMock(expired=False)
+
+        svc = _make_service()
+        mock_build.return_value = svc
+        svc.users().messages().send().execute.return_value = {"id": "new2"}
+
+        from app.services.gmail_tools import send_email
+        send_email("alice@example.com", "Test", "Hello\n\nSecond paragraph")
+
+        msg = self._decode_mime(svc)
+        parts = {p.get_content_type(): p.get_payload(decode=True).decode() for p in msg.walk()
+                 if not p.is_multipart()}
+        assert "text/plain" in parts
+        assert "text/html" in parts
+        assert "<p>" in parts["text/html"]
+        assert "Hello" in parts["text/plain"]
 
     @patch("app.services.gmail_tools.build")
     @patch("app.services.gmail_tools.Credentials.from_authorized_user_file")
@@ -264,13 +291,39 @@ class TestSendEmail:
 
         svc = _make_service()
         mock_build.return_value = svc
-        svc.users().messages().send().execute.return_value = {"id": "new2"}
+        svc.users().messages().send().execute.return_value = {"id": "new3"}
 
         from app.services.gmail_tools import send_email
         send_email("alice@example.com", "Test", "body")
 
         body = svc.users().messages().send.call_args.kwargs["body"]
         assert "threadId" not in body
+
+
+# ---------------------------------------------------------------------------
+# mark_as_read
+# ---------------------------------------------------------------------------
+
+class TestMarkAsRead:
+    @patch("app.services.gmail_tools.build")
+    @patch("app.services.gmail_tools.Credentials.from_authorized_user_file")
+    @patch("app.services.gmail_tools._TOKEN_FILE")
+    def test_removes_unread_label(self, mock_token_file, mock_creds, mock_build):
+        mock_token_file.exists.return_value = True
+        mock_token_file.__str__ = lambda s: "token.json"
+        mock_creds.return_value = MagicMock(expired=False)
+
+        svc = _make_service()
+        mock_build.return_value = svc
+        svc.users().messages().modify().execute.return_value = {"id": "msg1"}
+
+        from app.services.gmail_tools import mark_as_read
+        result = mark_as_read("msg1")
+
+        assert result["id"] == "msg1"
+        modify_call = svc.users().messages().modify.call_args
+        assert modify_call.kwargs["body"]["removeLabelIds"] == ["UNREAD"]
+        assert modify_call.kwargs["id"] == "msg1"
 
 
 # ---------------------------------------------------------------------------

@@ -106,21 +106,59 @@ def send_reply(message_id: str, body: str) -> dict:
 
 
 def send_email(to: str, subject: str, body: str) -> dict:
-    """Send a new email (not a reply)."""
+    """Send a new HTML-formatted email (not a reply)."""
+    import email.mime.multipart
+    import email.mime.text
+
+    msg = email.mime.multipart.MIMEMultipart("alternative")
+    msg["To"] = to
+    msg["Subject"] = subject
+
+    html_body = _text_to_html(body)
+    msg.attach(email.mime.text.MIMEText(body, "plain", "utf-8"))
+    msg.attach(email.mime.text.MIMEText(html_body, "html", "utf-8"))
+
+    encoded = base64.urlsafe_b64encode(msg.as_bytes()).decode("utf-8")
     service = _get_service()
-    raw_message = (
-        f"To: {to}\r\n"
-        f"Subject: {subject}\r\n"
-        f"Content-Type: text/plain; charset=utf-8\r\n"
-        f"\r\n"
-        f"{body}"
-    )
-    encoded = base64.urlsafe_b64encode(raw_message.encode("utf-8")).decode("utf-8")
     sent = service.users().messages().send(
         userId="me",
         body={"raw": encoded}
     ).execute()
     return sent
+
+
+def _text_to_html(text: str) -> str:
+    """Convert plain text to a simple formatted HTML email body."""
+    import html as html_lib
+    paragraphs = [
+        f"<p>{html_lib.escape(para)}</p>"
+        for para in text.strip().split("\n\n")
+        if para.strip()
+    ]
+    body_content = "\n".join(paragraphs)
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {{ font-family: Arial, sans-serif; font-size: 14px; color: #333; line-height: 1.6; }}
+    p {{ margin: 0 0 12px; }}
+  </style>
+</head>
+<body>
+{body_content}
+</body>
+</html>"""
+
+
+def mark_as_read(message_id: str) -> dict:
+    """Remove the UNREAD label from a message, marking it as read."""
+    service = _get_service()
+    return service.users().messages().modify(
+        userId="me",
+        id=message_id,
+        body={"removeLabelIds": ["UNREAD"]}
+    ).execute()
 
 
 def label_email(message_id: str, label: str) -> dict:

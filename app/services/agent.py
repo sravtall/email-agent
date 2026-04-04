@@ -28,6 +28,7 @@ TOOL NOTES:
 - get_email_body: reads full body of one email by id.
 - send_email: composes and sends a new email (confirm first).
 - send_reply: sends an in-thread reply (confirm first).
+- mark_as_read: marks an email as read, no confirmation needed.
 - label_email: applies a label to an email (confirm first).
 """
 
@@ -110,6 +111,20 @@ GMAIL_TOOLS: list[dict] = [
         },
     },
     {
+        "name": "mark_as_read",
+        "description": "Mark an email as read by removing the UNREAD label.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "message_id": {
+                    "type": "string",
+                    "description": "The Gmail message ID of the email to mark as read.",
+                }
+            },
+            "required": ["message_id"],
+        },
+    },
+    {
         "name": "label_email",
         "description": (
             "Apply a Gmail label to an email by message ID. "
@@ -138,6 +153,7 @@ _TOOL_MAP = {
     "get_email_body": gmail_tools.get_email_body,
     "send_email": gmail_tools.send_email,
     "send_reply": gmail_tools.send_reply,
+    "mark_as_read": gmail_tools.mark_as_read,
     "label_email": gmail_tools.label_email,
 }
 
