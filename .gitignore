@@ -37,3 +37,6 @@ htmlcov/
 # OS
 .DS_Store
 Thumbs.db
+
+# PM2 auto-start script (machine-specific paths)
+start-bot.bat
