@@ -91,6 +91,43 @@ class TestFetchRecentEmails:
         with pytest.raises(FileNotFoundError):
             fetch_recent_emails()
 
+    @patch("app.services.gmail_tools.build")
+    @patch("app.services.gmail_tools.Credentials.from_authorized_user_file")
+    @patch("app.services.gmail_tools._TOKEN_FILE")
+    def test_promotions_category_uses_correct_labels(self, mock_token_file, mock_creds, mock_build):
+        mock_token_file.exists.return_value = True
+        mock_token_file.__str__ = lambda s: "token.json"
+        mock_creds.return_value = MagicMock(expired=False)
+
+        svc = _make_service()
+        mock_build.return_value = svc
+        svc.users().messages().list().execute.return_value = {}
+
+        from app.services.gmail_tools import fetch_recent_emails
+        fetch_recent_emails(n=5, category="promotions")
+
+        list_call = svc.users().messages().list.call_args
+        assert "CATEGORY_PROMOTIONS" in list_call.kwargs["labelIds"]
+        assert "INBOX" in list_call.kwargs["labelIds"]
+
+    @patch("app.services.gmail_tools.build")
+    @patch("app.services.gmail_tools.Credentials.from_authorized_user_file")
+    @patch("app.services.gmail_tools._TOKEN_FILE")
+    def test_unknown_category_falls_back_to_inbox(self, mock_token_file, mock_creds, mock_build):
+        mock_token_file.exists.return_value = True
+        mock_token_file.__str__ = lambda s: "token.json"
+        mock_creds.return_value = MagicMock(expired=False)
+
+        svc = _make_service()
+        mock_build.return_value = svc
+        svc.users().messages().list().execute.return_value = {}
+
+        from app.services.gmail_tools import fetch_recent_emails
+        fetch_recent_emails(category="nonexistent")
+
+        list_call = svc.users().messages().list.call_args
+        assert list_call.kwargs["labelIds"] == ["INBOX"]
+
 
 # ---------------------------------------------------------------------------
 # get_email_body

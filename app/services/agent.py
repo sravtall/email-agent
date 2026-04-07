@@ -36,7 +36,7 @@ GMAIL_TOOLS: list[dict] = [
     {
         "name": "fetch_recent_emails",
         "description": (
-            "Fetch the most recent emails from the inbox. "
+            "Fetch the most recent emails from a Gmail inbox category. "
             "Returns subject, sender, snippet, and message ID for each."
         ),
         "input_schema": {
@@ -45,7 +45,15 @@ GMAIL_TOOLS: list[dict] = [
                 "n": {
                     "type": "integer",
                     "description": "How many recent emails to fetch (default 5).",
-                }
+                },
+                "category": {
+                    "type": "string",
+                    "description": (
+                        "Inbox tab to read from. "
+                        "Options: inbox (default), primary, promotions, social, updates, forums."
+                    ),
+                    "enum": ["inbox", "primary", "promotions", "social", "updates", "forums"],
+                },
             },
             "required": [],
         },

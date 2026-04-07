@@ -32,10 +32,24 @@ def _get_service() -> Any:
     return build("gmail", "v1", credentials=creds)
 
 
-def fetch_recent_emails(n: int = 5) -> list[dict]:
-    """Return the n most recent inbox messages (subject, sender, snippet, id)."""
+_CATEGORY_LABELS = {
+    "primary":    ["INBOX", "CATEGORY_PERSONAL"],
+    "promotions": ["INBOX", "CATEGORY_PROMOTIONS"],
+    "social":     ["INBOX", "CATEGORY_SOCIAL"],
+    "updates":    ["INBOX", "CATEGORY_UPDATES"],
+    "forums":     ["INBOX", "CATEGORY_FORUMS"],
+    "inbox":      ["INBOX"],
+}
+
+
+def fetch_recent_emails(n: int = 5, category: str = "inbox") -> list[dict]:
+    """Return the n most recent emails from the given inbox category.
+
+    category options: inbox (default), primary, promotions, social, updates, forums.
+    """
+    label_ids = _CATEGORY_LABELS.get(category.lower(), ["INBOX"])
     service = _get_service()
-    result = service.users().messages().list(userId="me", maxResults=n, labelIds=["INBOX"]).execute()
+    result = service.users().messages().list(userId="me", maxResults=n, labelIds=label_ids).execute()
     messages = result.get("messages", [])
     emails = []
     for msg in messages:
