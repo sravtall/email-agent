@@ -54,6 +54,10 @@ GMAIL_TOOLS: list[dict] = [
                     ),
                     "enum": ["inbox", "primary", "promotions", "social", "updates", "forums"],
                 },
+                "filter_spam": {
+                    "type": "boolean",
+                    "description": "Exclude spam emails from results (default true).",
+                },
             },
             "required": [],
         },

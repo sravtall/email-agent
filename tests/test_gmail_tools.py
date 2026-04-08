@@ -113,6 +113,42 @@ class TestFetchRecentEmails:
     @patch("app.services.gmail_tools.build")
     @patch("app.services.gmail_tools.Credentials.from_authorized_user_file")
     @patch("app.services.gmail_tools._TOKEN_FILE")
+    def test_filter_spam_on_by_default(self, mock_token_file, mock_creds, mock_build):
+        mock_token_file.exists.return_value = True
+        mock_token_file.__str__ = lambda s: "token.json"
+        mock_creds.return_value = MagicMock(expired=False)
+
+        svc = _make_service()
+        mock_build.return_value = svc
+        svc.users().messages().list().execute.return_value = {}
+
+        from app.services.gmail_tools import fetch_recent_emails
+        fetch_recent_emails()
+
+        list_call = svc.users().messages().list.call_args
+        assert list_call.kwargs["q"] == "-in:spam"
+
+    @patch("app.services.gmail_tools.build")
+    @patch("app.services.gmail_tools.Credentials.from_authorized_user_file")
+    @patch("app.services.gmail_tools._TOKEN_FILE")
+    def test_filter_spam_disabled(self, mock_token_file, mock_creds, mock_build):
+        mock_token_file.exists.return_value = True
+        mock_token_file.__str__ = lambda s: "token.json"
+        mock_creds.return_value = MagicMock(expired=False)
+
+        svc = _make_service()
+        mock_build.return_value = svc
+        svc.users().messages().list().execute.return_value = {}
+
+        from app.services.gmail_tools import fetch_recent_emails
+        fetch_recent_emails(filter_spam=False)
+
+        list_call = svc.users().messages().list.call_args
+        assert list_call.kwargs["q"] == ""
+
+    @patch("app.services.gmail_tools.build")
+    @patch("app.services.gmail_tools.Credentials.from_authorized_user_file")
+    @patch("app.services.gmail_tools._TOKEN_FILE")
     def test_unknown_category_falls_back_to_inbox(self, mock_token_file, mock_creds, mock_build):
         mock_token_file.exists.return_value = True
         mock_token_file.__str__ = lambda s: "token.json"

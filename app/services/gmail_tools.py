@@ -42,14 +42,18 @@ _CATEGORY_LABELS = {
 }
 
 
-def fetch_recent_emails(n: int = 5, category: str = "inbox") -> list[dict]:
+def fetch_recent_emails(n: int = 5, category: str = "inbox", filter_spam: bool = True) -> list[dict]:
     """Return the n most recent emails from the given inbox category.
 
     category options: inbox (default), primary, promotions, social, updates, forums.
+    filter_spam: exclude spam emails (default True).
     """
     label_ids = _CATEGORY_LABELS.get(category.lower(), ["INBOX"])
+    query = "-in:spam" if filter_spam else ""
     service = _get_service()
-    result = service.users().messages().list(userId="me", maxResults=n, labelIds=label_ids).execute()
+    result = service.users().messages().list(
+        userId="me", maxResults=n, labelIds=label_ids, q=query
+    ).execute()
     messages = result.get("messages", [])
     emails = []
     for msg in messages:
