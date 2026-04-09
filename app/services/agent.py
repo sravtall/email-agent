@@ -18,7 +18,7 @@ RESPONSE FORMAT:
 - When listing emails, use compact lines: "1. Alice - Meeting notes"
 
 CONFIRMATION RULE:
-- Before calling send_email, send_reply, or label_email you MUST ask the user to confirm.
+- Before calling send_email, send_reply, label_email, or empty_spam you MUST ask the user to confirm.
 - Format: "Send to <recipient>: '<preview>'? Reply YES to confirm."
 - Only call the tool when the user's message is an explicit YES / confirm / go ahead / do it.
 - If they say NO or anything else, cancel and say so in one short line.
@@ -29,6 +29,7 @@ TOOL NOTES:
 - send_email: composes and sends a new email (confirm first).
 - send_reply: sends an in-thread reply (confirm first).
 - mark_as_read: marks an email as read, no confirmation needed.
+- empty_spam: moves all spam to trash (confirm first).
 - label_email: applies a label to an email (confirm first).
 """
 
@@ -123,6 +124,24 @@ GMAIL_TOOLS: list[dict] = [
         },
     },
     {
+        "name": "empty_spam",
+        "description": (
+            "Move all emails in the spam folder to trash. "
+            "Capped at 50 emails per call for safety. "
+            "MUST be confirmed by the user before calling."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "max_emails": {
+                    "type": "integer",
+                    "description": "Maximum number of spam emails to trash (default 50).",
+                }
+            },
+            "required": [],
+        },
+    },
+    {
         "name": "mark_as_read",
         "description": "Mark an email as read by removing the UNREAD label.",
         "input_schema": {
@@ -165,6 +184,7 @@ _TOOL_MAP = {
     "get_email_body": gmail_tools.get_email_body,
     "send_email": gmail_tools.send_email,
     "send_reply": gmail_tools.send_reply,
+    "empty_spam": gmail_tools.empty_spam,
     "mark_as_read": gmail_tools.mark_as_read,
     "label_email": gmail_tools.label_email,
 }

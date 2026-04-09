@@ -374,6 +374,74 @@ class TestSendEmail:
 
 
 # ---------------------------------------------------------------------------
+# empty_spam
+# ---------------------------------------------------------------------------
+
+class TestEmptySpam:
+    @patch("app.services.gmail_tools.build")
+    @patch("app.services.gmail_tools.Credentials.from_authorized_user_file")
+    @patch("app.services.gmail_tools._TOKEN_FILE")
+    def test_trashes_all_spam(self, mock_token_file, mock_creds, mock_build):
+        mock_token_file.exists.return_value = True
+        mock_token_file.__str__ = lambda s: "token.json"
+        mock_creds.return_value = MagicMock(expired=False)
+
+        svc = _make_service()
+        mock_build.return_value = svc
+        svc.users().messages().list().execute.return_value = {
+            "messages": [{"id": "s1"}, {"id": "s2"}, {"id": "s3"}]
+        }
+        svc.users().messages().trash().execute.return_value = {}
+
+        from app.services.gmail_tools import empty_spam
+        result = empty_spam()
+
+        assert result["trashed"] == 3
+        actual_trash_calls = [
+            c for c in svc.users().messages().trash.call_args_list
+            if c.kwargs.get("userId") == "me"
+        ]
+        assert len(actual_trash_calls) == 3
+
+    @patch("app.services.gmail_tools.build")
+    @patch("app.services.gmail_tools.Credentials.from_authorized_user_file")
+    @patch("app.services.gmail_tools._TOKEN_FILE")
+    def test_returns_zero_when_no_spam(self, mock_token_file, mock_creds, mock_build):
+        mock_token_file.exists.return_value = True
+        mock_token_file.__str__ = lambda s: "token.json"
+        mock_creds.return_value = MagicMock(expired=False)
+
+        svc = _make_service()
+        mock_build.return_value = svc
+        svc.users().messages().list().execute.return_value = {}
+
+        from app.services.gmail_tools import empty_spam
+        result = empty_spam()
+
+        assert result == {"trashed": 0}
+        svc.users().messages().trash.assert_not_called()
+
+    @patch("app.services.gmail_tools.build")
+    @patch("app.services.gmail_tools.Credentials.from_authorized_user_file")
+    @patch("app.services.gmail_tools._TOKEN_FILE")
+    def test_uses_spam_label(self, mock_token_file, mock_creds, mock_build):
+        mock_token_file.exists.return_value = True
+        mock_token_file.__str__ = lambda s: "token.json"
+        mock_creds.return_value = MagicMock(expired=False)
+
+        svc = _make_service()
+        mock_build.return_value = svc
+        svc.users().messages().list().execute.return_value = {}
+
+        from app.services.gmail_tools import empty_spam
+        empty_spam(max_emails=10)
+
+        list_call = svc.users().messages().list.call_args
+        assert list_call.kwargs["labelIds"] == ["SPAM"]
+        assert list_call.kwargs["maxResults"] == 10
+
+
+# ---------------------------------------------------------------------------
 # mark_as_read
 # ---------------------------------------------------------------------------
 

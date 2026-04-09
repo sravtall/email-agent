@@ -169,6 +169,20 @@ def _text_to_html(text: str) -> str:
 </html>"""
 
 
+def empty_spam(max_emails: int = 50) -> dict:
+    """Move all emails in the spam folder to trash. Capped at max_emails for safety."""
+    service = _get_service()
+    result = service.users().messages().list(
+        userId="me", labelIds=["SPAM"], maxResults=max_emails
+    ).execute()
+    messages = result.get("messages", [])
+    if not messages:
+        return {"trashed": 0}
+    for msg in messages:
+        service.users().messages().trash(userId="me", id=msg["id"]).execute()
+    return {"trashed": len(messages)}
+
+
 def mark_as_read(message_id: str) -> dict:
     """Remove the UNREAD label from a message, marking it as read."""
     service = _get_service()
